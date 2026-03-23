@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Work Tracker" />
+  <title>Work Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f0f0f;
+      --bg2:      #1a1a1a;
+      --bg3:      #242424;
+      --border:   rgba(255,255,255,0.08);
+      --border2:  rgba(255,255,255,0.14);
+      --text:     #f0ede8;
+      --muted:    #888580;
+      --hint:     #555250;
+      --accent:   #1D9E75;
+      --accent-l: rgba(29,158,117,0.12);
+      --accent-t: #4ecba0;
+      --warn:     #e05a4a;
+      --warn-l:   rgba(224,90,74,0.12);
+      --amber:    #d4893a;
+      --amber-l:  rgba(212,137,58,0.12);
+      --r:        14px;
+      --rm:       9px;
+    }
+
+    html { height: 100%; }
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 4rem;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+    .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-sub { font-size: 12px; color: var(--hint); }
+
+    .settings-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--bg2);
+      border: 0.5px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .settings-btn:hover { background: var(--bg3); }
+
+    .card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--r);
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--hint);
+      margin-bottom: 8px;
+    }
+
+    .select-wrap { position: relative; }
+    .select-wrap select {
+      width: 100%;
+      appearance: none;
+      background: var(--bg3);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--rm);
+      padding: 11px 36px 11px 13px;
+      font-size: 14px;
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      cursor: pointer;
+    }
+    .select-wrap select option { background: #1a1a1a; }
+    .select-wrap::after {
+      content: '';
+      position: absolute;
+      right: 13px; top: 50%;
+      transform: translateY(-50%);
+      border: 4px solid transparent;
+      border-top-color: var(--muted);
+      pointer-events: none;
+    }
+    .select-wrap select:focus { outline: none; border-color: var(--accent); }
+
+    .task-input {
+      width: 100%;
+      background: var(--bg3);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--rm);
+      padding: 11px 13px;
+      font-size: 14px;
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      margin-top: 8px;
+    }
+    .task-input::placeholder { color: var(--hint); }
+    .task-input:focus { outline: none; border-color: var(--accent); }
+
+    .timer-block {
+      text-align: center;
+      padding: 2rem 0 1.5rem;
+    }
+
+    .time-big {
+      font-family: 'DM Mono', monospace;
+      font-size: 58px;
+      font-weight: 400;
+      letter-spacing: 3px;
+      color: var(--text);
+      line-height: 1;
+      transition: color 0.3s;
+    }
+    .time-big.running { color: var(--accent-t); }
+    .time-big.paused  { color: var(--amber); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 99px;
+      margin-top: 14px;
+      background: var(--bg3);
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+    .badge.running { background: var(--accent-l); color: var(--accent-t); }
+    .badge.paused  { background: var(--amber-l);  color: var(--amber); }
+
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .dot.pulse { animation: pulse 1.3s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 1rem 0;
+    }
+    .meta-cell {
+      background: var(--bg3);
+      border-radius: var(--rm);
+      padding: 10px 12px;
+    }
+    .meta-cell .ml { font-size: 10px; color: var(--hint); text-transform: uppercase; letter-spacing: 0.07em; }
+    .meta-cell .mv { font-size: 13px; font-weight: 500; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .btn-start {
+      width: 100%;
+      padding: 15px;
+      border-radius: var(--rm);
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .btn-start.idle    { background: var(--text); color: #0f0f0f; }
+    .btn-start.running { background: var(--amber-l); color: var(--amber); border: 0.5px solid var(--amber); }
+    .btn-start.paused  { background: var(--accent-l); color: var(--accent-t); border: 0.5px solid var(--accent); }
+    .btn-start:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-start:active { transform: scale(0.98); }
+    .btn-start:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+    .btn-stop {
+      width: 100%;
+      padding: 13px;
+      border-radius: var(--rm);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 0.5px solid var(--warn);
+      background: var(--warn-l);
+      color: var(--warn);
+      transition: all 0.15s;
+      margin-top: 8px;
+    }
+    .btn-stop:hover { opacity: 0.8; }
+    .btn-stop:active { transform: scale(0.98); }
+    .btn-stop:disabled { opacity: 0.25; cursor: not-allowed; transform: none; }
+
+    .status-msg {
+      font-size: 12px;
+      padding: 9px 13px;
+      border-radius: var(--rm);
+      margin-top: 8px;
+      display: none;
+      line-height: 1.5;
+    }
+    .status-msg.success { background: var(--accent-l); color: var(--accent-t); display: block; }
+    .status-msg.error   { background: var(--warn-l);   color: var(--warn);    display: block; }
+    .status-msg.info    { background: var(--amber-l);  color: var(--amber);   display: block; }
+
+    .sheet-input {
+      width: 100%;
+      background: var(--bg3);
+      border: 0.5px solid var(--border2);
+      border-radius: var(--rm);
+      padding: 10px 13px;
+      font-size: 13px;
+      font-family: 'Syne', monospace;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .sheet-input::placeholder { color: var(--hint); }
+    .sheet-input:focus { outline: none; border-color: var(--accent); }
+
+    .hint-text { font-size: 11px; color: var(--hint); line-height: 1.6; }
+
+    .log-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .clear-btn { font-size: 11px; color: var(--hint); background: none; border: none; cursor: pointer; font-family: 'Syne', sans-serif; }
+    .clear-btn:hover { color: var(--warn); }
+
+    .log-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 0.5px solid var(--border);
+      font-size: 13px;
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 5px; flex-shrink: 0; }
+    .log-main { flex: 1; min-width: 0; }
+    .log-cat  { font-weight: 500; }
+    .log-sub  { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .log-dur  { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); white-space: nowrap; padding-top: 2px; }
+    .empty-log { font-size: 13px; color: var(--hint); text-align: center; padding: 1.5rem 0; }
+
+    /* Settings panel */
+    .panel-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+    }
+    .panel-overlay.open { display: flex; align-items: flex-end; justify-content: center; }
+    .panel {
+      background: var(--bg2);
+      border: 0.5px solid var(--border2);
+      border-radius: 18px 18px 0 0;
+      padding: 1.5rem 1.25rem 2.5rem;
+      width: 100%;
+      max-width: 480px;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .panel-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 1.5rem; }
+    .panel h2 { font-size: 16px; font-weight: 700; margin-bottom: 1.25rem; }
+    .panel-close { float: right; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; margin-top: -2px; }
+
+    .divider { height: 0.5px; background: var(--border); margin: 1rem 0; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div>
+      <h1>Work Tracker</h1>
+      <div class="header-sub" id="todayDate"></div>
+    </div>
+    <div class="settings-btn" onclick="openSettings()" title="Settings">⚙</div>
+  </div>
+
+  <!-- Category -->
+  <div class="card">
+    <div class="label">Category</div>
+    <div class="select-wrap">
+      <select id="catSelect">
+        <option value="">— Select a category —</option>
+        <optgroup label="Design">
+          <option value="Design|Rough Draft">Design · Rough Draft</option>
+          <option value="Design|Wireframing">Design · Wireframing</option>
+          <option value="Design|UI Design">Design · UI Design</option>
+          <option value="Design|Branding &amp; Identity">Design · Branding &amp; Identity</option>
+          <option value="Design|Prototyping">Design · Prototyping</option>
+          <option value="Design|Client Review">Design · Client Review</option>
+          <option value="Design|Revisions">Design · Revisions</option>
+        </optgroup>
+        <optgroup label="Development">
+          <option value="Development|HTML &amp; CSS">Development · HTML &amp; CSS</option>
+          <option value="Development|JavaScript">Development · JavaScript</option>
+          <option value="Development|WordPress">Development · WordPress</option>
+          <option value="Development|E-Commerce">Development · E-Commerce</option>
+          <option value="Development|API Integration">Development · API Integration</option>
+          <option value="Development|Bug Fixes">Development · Bug Fixes</option>
+          <option value="Development|Performance Optimization">Development · Performance Optimization</option>
+        </optgroup>
+        <optgroup label="Strategy">
+          <option value="Strategy|Discovery &amp; Research">Strategy · Discovery &amp; Research</option>
+          <option value="Strategy|Site Mapping">Strategy · Site Mapping</option>
+          <option value="Strategy|Content Planning">Strategy · Content Planning</option>
+          <option value="Strategy|SEO Planning">Strategy · SEO Planning</option>
+        </optgroup>
+        <optgroup label="Client Work">
+          <option value="Client|Meetings &amp; Calls">Client · Meetings &amp; Calls</option>
+          <option value="Client|Proposals &amp; Quotes">Client · Proposals &amp; Quotes</option>
+          <option value="Client|Project Management">Client · Project Management</option>
+          <option value="Client|Feedback &amp; QA">Client · Feedback &amp; QA</option>
+        </optgroup>
+        <optgroup label="Other">
+          <option value="Other|Admin">Other · Admin</option>
+          <option value="Other|Learning &amp; Research">Other · Learning &amp; Research</option>
+          <option value="Other|Miscellaneous">Other · Miscellaneous</option>
+        </optgroup>
+      </select>
+    </div>
+    <input class="task-input" id="taskNote" placeholder="Task note (optional)…" maxlength="100" />
+  </div>
+
+  <!-- Timer -->
+  <div class="card">
+    <div class="timer-block">
+      <div class="time-big" id="timerDisplay">00:00:00</div>
+      <div>
+        <span class="badge" id="badge">
+          <span class="dot" id="dot"></span>
+          <span id="badgeText">Ready</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-cell">
+        <div class="ml">Category</div>
+        <div class="mv" id="mCat">—</div>
+      </div>
+      <div class="meta-cell">
+        <div class="ml">Started</div>
+        <div class="mv" id="mStart">—</div>
+      </div>
+    </div>
+
+    <button class="btn-start idle" id="startBtn" onclick="toggleTimer()">Start work</button>
+    <button class="btn-stop" id="stopBtn" onclick="stopWork()" disabled>Finish &amp; save session</button>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="log-header">
+      <div class="label" style="margin-bottom:0">Recent sessions</div>
+      <button class="clear-btn" onclick="clearLog()">Clear all</button>
+    </div>
+    <div id="logList"><div class="empty-log">No sessions yet</div></div>
+  </div>
+
+</div>
+
+<!-- Settings Panel -->
+<div class="panel-overlay" id="overlay" onclick="closeSettings(event)">
+  <div class="panel">
+    <div class="panel-handle"></div>
+    <button class="panel-close" onclick="closeSettings()">✕</button>
+    <h2>Settings</h2>
+
+    <div class="label">Google Sheets webhook URL</div>
+    <input class="sheet-input" id="sheetUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+
+    <div class="label" style="margin-top:12px;">Secret key (optional)</div>
+    <input class="sheet-input" id="secretKey" placeholder="your-secret-key" />
+
+    <div class="hint-text">
+      Paste your Apps Script web app URL above. Every finished session will be sent automatically. Your data stays in your own Google Sheet.
+    </div>
+
+    <div class="divider"></div>
+
+    <button onclick="saveSettings()" style="width:100%;padding:12px;border-radius:9px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none;background:var(--text);color:#0f0f0f;">Save settings</button>
+  </div>
+</div>
+
+<script>
+  let state = 'idle';
+  let startTs = null;
+  let accumulated = 0;
+  let interval = null;
+  let sessionLog = JSON.parse(localStorage.getItem('wt_log') || '[]');
+
+  // Load settings
+  const sheetUrlEl = document.getElementById('sheetUrl');
+  const secretKeyEl = document.getElementById('secretKey');
+  sheetUrlEl.value = localStorage.getItem('wt_sheetUrl') || '';
+  secretKeyEl.value = localStorage.getItem('wt_secretKey') || '';
+
+  document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+  function pad(n) { return String(n).padStart(2,'0'); }
+  function fmtDur(ms) {
+    const s = Math.floor(ms/1000);
+    return pad(Math.floor(s/3600))+':'+pad(Math.floor((s%3600)/60))+':'+pad(s%60);
+  }
+  function fmtTime(d) { return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}); }
+  function fmtDate(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+
+  function getElapsed() {
+    if (!startTs || state === 'paused') return accumulated;
+    return accumulated + (Date.now() - startTs);
+  }
+
+  function tick() {
+    document.getElementById('timerDisplay').textContent = fmtDur(getElapsed());
+  }
+
+  function setStatus(s) {
+    const badge = document.getElementById('badge');
+    const dot = document.getElementById('dot');
+    badge.className = 'badge ' + s;
+    dot.className = 'dot ' + (s==='running' ? 'pulse' : '');
+    document.getElementById('badgeText').textContent = s==='running'?'Running':s==='paused'?'Paused':'Ready';
+    document.getElementById('timerDisplay').className = 'time-big ' + (s==='idle'?'':s);
+  }
+
+  function toggleTimer() {
+    const cat = document.getElementById('catSelect').value;
+    if (state === 'idle') {
+      if (!cat) { showMsg('Please select a category first', 'info'); return; }
+      state = 'running';
+      startTs = Date.now();
+      accumulated = 0;
+      document.getElementById('mCat').textContent = cat.split('|').join(' › ');
+      document.getElementById('mStart').textContent = fmtTime(new Date());
+      document.getElementById('startBtn').textContent = 'Pause';
+      document.getElementById('startBtn').className = 'btn-start running';
+      document.getElementById('stopBtn').disabled = false;
+      interval = setInterval(tick, 500);
+      setStatus('running');
+    } else if (state === 'running') {
+      state = 'paused';
+      accumulated += Date.now() - startTs;
+      startTs = null;
+      clearInterval(interval);
+      document.getElementById('startBtn').textContent = 'Resume';
+      document.getElementById('startBtn').className = 'btn-start paused';
+      setStatus('paused');
+    } else {
+      state = 'running';
+      startTs = Date.now();
+      interval = setInterval(tick, 500);
+      document.getElementById('startBtn').textContent = 'Pause';
+      document.getElementById('startBtn').className = 'btn-start running';
+      setStatus('running');
+    }
+  }
+
+  function stopWork() {
+    if (state === 'idle') return;
+    clearInterval(interval);
+    const elapsed = getElapsed();
+    const cat = document.getElementById('catSelect').value;
+    const note = document.getElementById('taskNote').value.trim();
+    const endTime = new Date();
+    const entry = {
+      id: Date.now(),
+      date: fmtDate(endTime),
+      category: cat.split('|')[0],
+      subcategory: cat.split('|')[1] || '',
+      note,
+      start: document.getElementById('mStart').textContent,
+      end: fmtTime(endTime),
+      durationMs: elapsed,
+      duration: fmtDur(elapsed)
+    };
+    sessionLog.unshift(entry);
+    localStorage.setItem('wt_log', JSON.stringify(sessionLog));
+    renderLog();
+    sendToSheets(entry);
+    reset();
+  }
+
+  function reset() {
+    state = 'idle'; startTs = null; accumulated = 0;
+    clearInterval(interval);
+    document.getElementById('timerDisplay').textContent = '00:00:00';
+    document.getElementById('timerDisplay').className = 'time-big';
+    document.getElementById('startBtn').textContent = 'Start work';
+    document.getElementById('startBtn').className = 'btn-start idle';
+    document.getElementById('stopBtn').disabled = true;
+    document.getElementById('mCat').textContent = '—';
+    document.getElementById('mStart').textContent = '—';
+    document.getElementById('catSelect').value = '';
+    document.getElementById('taskNote').value = '';
+    setStatus('idle');
+  }
+
+  function sendToSheets(entry) {
+    const url = localStorage.getItem('wt_sheetUrl') || '';
+    const key = localStorage.getItem('wt_secretKey') || '';
+    if (!url) { showMsg('Session saved locally. Add Sheets URL in settings ⚙', 'info'); return; }
+    showMsg('Sending to Google Sheets…', 'info');
+    fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...entry, key })
+    }).then(() => {
+      showMsg('Saved to Google Sheets!', 'success');
+    }).catch(() => {
+      showMsg('Could not reach Sheets. Session saved locally.', 'error');
+    });
+  }
+
+  function showMsg(msg, type) {
+    const el = document.getElementById('statusMsg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + type;
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 6000);
+  }
+
+  function renderLog() {
+    const list = document.getElementById('logList');
+    if (!sessionLog.length) { list.innerHTML = '<div class="empty-log">No sessions yet</div>'; return; }
+    list.innerHTML = sessionLog.slice(0,10).map(e => `
+      <div class="log-entry">
+        <div class="log-pip"></div>
+        <div class="log-main">
+          <div class="log-cat">${e.category} › ${e.subcategory}</div>
+          <div class="log-sub">${e.note || e.date} &middot; ${e.start} → ${e.end}</div>
+        </div>
+        <div class="log-dur">${e.duration}</div>
+      </div>
+    `).join('');
+  }
+
+  function clearLog() {
+    if (!confirm('Clear all local session history?')) return;
+    sessionLog = [];
+    localStorage.setItem('wt_log','[]');
+    renderLog();
+  }
+
+  function openSettings() { document.getElementById('overlay').classList.add('open'); }
+  function closeSettings(e) {
+    if (!e || e.target === document.getElementById('overlay')) {
+      document.getElementById('overlay').classList.remove('open');
+    }
+  }
+  function saveSettings() {
+    localStorage.setItem('wt_sheetUrl', sheetUrlEl.value.trim());
+    localStorage.setItem('wt_secretKey', secretKeyEl.value.trim());
+    closeSettings();
+    showMsg('Settings saved!', 'success');
+  }
+
+  renderLog();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+</body>
+</html>
