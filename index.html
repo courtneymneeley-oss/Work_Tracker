@@ -468,9 +468,9 @@
     destroyCharts();
     let rows=[];
     try {
-      const res=await fetch(url);
+      const res=await fetch(url + '?nocache=' + Date.now());
       const raw=await res.json();
-      rows=raw.filter(r=>r['Duration (ms)']||r.durationMs).map(r=>({
+      rows=raw.filter(r=>r['Duration (ms)']!==undefined&&r['Duration (ms)']!=='').map(r=>({
         date:r.Date||r.date||'', category:r.Category||r.category||'',
         sub:r.Subcategory||r.subcategory||'', ms:Number(r['Duration (ms)']||r.durationMs||0)
       })).filter(r=>r.ms>0);
